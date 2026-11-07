@@ -1,0 +1,9 @@
+# Variables d'environnement sensibles
+.env
+.env.*
+
+# Autoriser le modèle de configuration
+!.env.example
+
+# Fichiers temporaires
+*.log
