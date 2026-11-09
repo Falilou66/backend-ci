@@ -1,6 +1,0 @@
-com/uadb/backend/resource/dto/RessourceRequest.class
-com/uadb/backend/resource/entity/RessourceEntity.class
-com/uadb/backend/resource/repository/RessourceRepository.class
-com/uadb/backend/resource/ResourceServiceApplication.class
-com/uadb/backend/resource/controller/RessourceController.class
-com/uadb/backend/resource/service/RessourceService.class

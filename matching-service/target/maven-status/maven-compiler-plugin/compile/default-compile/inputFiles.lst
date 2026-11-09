@@ -1,8 +1,0 @@
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/matching-service/src/main/java/com/uadb/backend/matching/MatchingServiceApplication.java
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/matching-service/src/main/java/com/uadb/backend/matching/controller/DemandeMatchingController.java
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/matching-service/src/main/java/com/uadb/backend/matching/dto/DecisionRequest.java
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/matching-service/src/main/java/com/uadb/backend/matching/dto/DemandeMatchingRequest.java
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/matching-service/src/main/java/com/uadb/backend/matching/entity/DemandeMatchingEntity.java
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/matching-service/src/main/java/com/uadb/backend/matching/entity/StatutDemande.java
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/matching-service/src/main/java/com/uadb/backend/matching/repository/DemandeMatchingRepository.java
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/matching-service/src/main/java/com/uadb/backend/matching/service/DemandeMatchingService.java

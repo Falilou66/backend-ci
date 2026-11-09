@@ -1,6 +1,0 @@
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/resource-service/src/main/java/com/uadb/backend/resource/ResourceServiceApplication.java
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/resource-service/src/main/java/com/uadb/backend/resource/controller/RessourceController.java
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/resource-service/src/main/java/com/uadb/backend/resource/dto/RessourceRequest.java
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/resource-service/src/main/java/com/uadb/backend/resource/entity/RessourceEntity.java
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/resource-service/src/main/java/com/uadb/backend/resource/repository/RessourceRepository.java
-/home/falilou/Bureau/MASTER 2/DEVOPS/backend-ci/resource-service/src/main/java/com/uadb/backend/resource/service/RessourceService.java

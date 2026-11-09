@@ -7,3 +7,4 @@
 
 # Fichiers temporaires
 *.log
+target/
