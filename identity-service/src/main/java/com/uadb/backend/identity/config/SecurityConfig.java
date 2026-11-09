@@ -4,13 +4,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
-
 
 @EnableMethodSecurity
 @Configuration
@@ -18,7 +17,6 @@ public class SecurityConfig {
 
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
-
         JwtGrantedAuthoritiesConverter authoritiesConverter =
                 new JwtGrantedAuthoritiesConverter();
 
@@ -29,7 +27,6 @@ public class SecurityConfig {
                 new JwtAuthenticationConverter();
 
         converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
-
         return converter;
     }
 
@@ -41,26 +38,33 @@ public class SecurityConfig {
 
         http
             .csrf(csrf -> csrf.disable())
-
             .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-
+                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    HttpMethod.POST,
-                    "/api/v1/auth/inscription",
-                    "/api/v1/auth/login"
-                ).permitAll()
-                .anyRequest().authenticated()
+                    .requestMatchers(
+                            HttpMethod.GET,
+                            "/api/v1/utilisateurs/etudiants/destinataires"
+                    ).permitAll()
+                    .requestMatchers(
+                            HttpMethod.POST,
+                            "/api/v1/auth/login",
+                            "/api/v1/auth/inscription-institutionnelle"
+                    ).permitAll()
+                    .requestMatchers(
+                            HttpMethod.PUT,
+                            "/api/v1/auth/premiere-connexion/mot-de-passe"
+                    ).hasRole("PREMIERE_CONNEXION")
+                    .requestMatchers(
+                            HttpMethod.POST,
+                            "/api/v1/auth/inscription"
+                    ).hasRole("ADMINISTRATEUR")
+                    .anyRequest().hasAnyRole(
+                            "ETUDIANT", "ENSEIGNANT", "ADMINISTRATEUR", "TUTEUR"
+                    )
             )
-
             .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt
-                    .jwtAuthenticationConverter(jwtAuthenticationConverter)
-                )
-            )
-
+                    .jwt(jwt -> jwt
+                            .jwtAuthenticationConverter(jwtAuthenticationConverter)))
             .httpBasic(basic -> basic.disable())
             .formLogin(form -> form.disable());
 

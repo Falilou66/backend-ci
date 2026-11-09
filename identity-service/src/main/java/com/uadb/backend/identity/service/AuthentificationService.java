@@ -1,13 +1,12 @@
-
 package com.uadb.backend.identity.service;
 
+import com.uadb.backend.identity.dto.ChangerMotDePasseRequest;
 import com.uadb.backend.identity.dto.LoginRequest;
 import com.uadb.backend.identity.dto.LoginResponse;
 import com.uadb.backend.identity.entity.UtilisateurEntity;
 import com.uadb.backend.identity.enums.StatutUtilisateur;
 import com.uadb.backend.identity.repository.UtilisateurRepository;
 import com.uadb.backend.identity.security.JwtService;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -33,7 +32,6 @@ public class AuthentificationService {
             UtilisateurRepository utilisateurRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService) {
-
         this.utilisateurRepository = utilisateurRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -42,34 +40,37 @@ public class AuthentificationService {
     @Transactional(readOnly = true)
     public LoginResponse connecter(LoginRequest request) {
 
-        String email = request.email()
-                .trim()
-                .toLowerCase(Locale.ROOT);
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
 
         UtilisateurEntity utilisateur = utilisateurRepository
                 .findByEmail(email)
-                .orElseThrow(() ->
-                        new BadCredentialsException(
-                                "Email ou mot de passe incorrect."
-                        )
-                );
+                .orElseThrow(() -> new BadCredentialsException(
+                        "Email ou mot de passe incorrect."
+                ));
 
         if (!passwordEncoder.matches(
-                request.motDePasse(),
-                utilisateur.getMotDePasse())) {
-
+                request.motDePasse(), utilisateur.getMotDePasse())) {
             throw new BadCredentialsException(
                     "Email ou mot de passe incorrect."
             );
         }
 
         if (utilisateur.getStatut() != StatutUtilisateur.ACTIF) {
-            throw new DisabledException(
-                    "Ce compte n'est pas actif. Veuillez contacter l'administration."
-            );
+            throw new DisabledException("Ce compte n'est pas actif.");
         }
 
-        String token = jwtService.genererToken(utilisateur);
+        if (utilisateur.isDoitChangerMotDePasse()) {
+            return new LoginResponse(
+                    jwtService.genererTokenPremiereConnexion(utilisateur),
+                    "Bearer",
+                    900,
+                    utilisateur.getId(),
+                    utilisateur.getNom(),
+                    utilisateur.getPrenom(),
+                    utilisateur.getEmail(),
+                    Set.of("PREMIERE_CONNEXION")
+            );
+        }
 
         Set<String> roles = utilisateur.getRoles()
                 .stream()
@@ -77,7 +78,48 @@ public class AuthentificationService {
                 .collect(Collectors.toSet());
 
         return new LoginResponse(
-                token,
+                jwtService.genererToken(utilisateur),
+                "Bearer",
+                expiration / 1000,
+                utilisateur.getId(),
+                utilisateur.getNom(),
+                utilisateur.getPrenom(),
+                utilisateur.getEmail(),
+                roles
+        );
+    }
+
+    @Transactional
+    public LoginResponse changerMotDePasse(
+            String email,
+            ChangerMotDePasseRequest request) {
+
+        UtilisateurEntity utilisateur = utilisateurRepository
+                .findByEmail(email)
+                .orElseThrow(() -> new BadCredentialsException(
+                        "Utilisateur introuvable."
+                ));
+
+        if (!utilisateur.isDoitChangerMotDePasse()) {
+            throw new IllegalArgumentException(
+                    "Aucun changement initial de mot de passe n'est requis."
+            );
+        }
+
+        utilisateur.setMotDePasse(
+                passwordEncoder.encode(request.nouveauMotDePasse())
+        );
+        utilisateur.setDoitChangerMotDePasse(false);
+
+        utilisateurRepository.save(utilisateur);
+
+        Set<String> roles = utilisateur.getRoles()
+                .stream()
+                .map(Enum::name)
+                .collect(Collectors.toSet());
+
+        return new LoginResponse(
+                jwtService.genererToken(utilisateur),
                 "Bearer",
                 expiration / 1000,
                 utilisateur.getId(),

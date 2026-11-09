@@ -1,4 +1,3 @@
-
 package com.uadb.backend.identity.entity;
 
 import com.uadb.backend.identity.enums.Role;
@@ -39,6 +38,9 @@ public class UtilisateurEntity {
 
     @Column(length = 20)
     private String telephone;
+
+    @Column(nullable = false)
+    private boolean doitChangerMotDePasse = false;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -114,6 +116,14 @@ public class UtilisateurEntity {
 
     public void setTelephone(String telephone) {
         this.telephone = telephone;
+    }
+
+    public boolean isDoitChangerMotDePasse() {
+        return doitChangerMotDePasse;
+    }
+
+    public void setDoitChangerMotDePasse(boolean doitChangerMotDePasse) {
+        this.doitChangerMotDePasse = doitChangerMotDePasse;
     }
 
     public StatutUtilisateur getStatut() {
