@@ -41,6 +41,8 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                     .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                    // Health check public (Docker, pipeline CD) : ne renvoie que l'état UP/DOWN
+                    .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                     .requestMatchers(
                             HttpMethod.GET,
                             "/api/v1/utilisateurs/etudiants/destinataires"
