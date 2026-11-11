@@ -38,8 +38,9 @@
         <java.version>25</java.version>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <springdoc.version>2.8.0</springdoc.version>
-        <spring-cloud.version>2024.0.0</spring-cloud.version>
+        <springdoc.version>3.2.0</springdoc.version>
+        <!-- Spring Cloud 2025.1.x (Oakwood) : seule famille compatible avec Spring Boot 4.1 -->
+        <spring-cloud.version>2025.1.4</spring-cloud.version>
     </properties>
 
     <dependencyManagement>
@@ -54,18 +55,25 @@
                 <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
                 <version>${springdoc.version}</version>
             </dependency>
+            <!-- Catalogue officiel (BOM) : versions Spring Cloud compatibles entre elles -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-                <version>4.2.0</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
-                <version>4.2.0</version>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <!-- Dépendances héritées par TOUS les modules -->
+    <dependencies>
+        <!-- Actuator : expose /actuator/health (health checks Docker et pipeline CD) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+    </dependencies>
 
     <build>
         <pluginManagement>
