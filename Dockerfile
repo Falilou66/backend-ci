@@ -3,14 +3,14 @@
 # Le contexte de build est la RACINE du projet, pour que Maven voie le pom parent.
 
 # ---------- Étage 1 : compilation avec Maven ----------
-FROM eclipse-temurin:25-jdk-alpine AS builder
-
-# Nom du module Maven à construire (eureka-server, api-gateway, identity-service, ...)
-ARG SERVICE
-
-RUN apk add --no-cache maven
+# Image officielle Maven + Java 25 (la même que le pipeline Jenkins) : rien à installer
+FROM maven:3.10-eclipse-temurin-25-alpine AS builder
 
 WORKDIR /app
+
+# Nom du module Maven à construire (eureka-server, api-gateway, identity-service, ...)
+# Déclaré le plus tard possible : tout ce qui précède reste en cache d'un service à l'autre
+ARG SERVICE
 
 # On copie tout le projet : le pom parent + tous les modules
 COPY . .

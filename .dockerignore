@@ -1,6 +1,7 @@
-# Maven
-target/
-*.jar
+# Maven : **/ = dans TOUS les modules (target/ seul ne vise que la racine du projet)
+**/target/
+**/*.jar
+trivy-backend.txt
 *.war
 *.ear
 .mvn/
