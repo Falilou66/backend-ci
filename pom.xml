@@ -41,6 +41,8 @@
         <springdoc.version>3.2.0</springdoc.version>
         <!-- Spring Cloud 2025.1.x (Oakwood) : seule famille compatible avec Spring Boot 4.1 -->
         <spring-cloud.version>2025.1.4</spring-cloud.version>
+        <!-- Sécurité (OWASP) : CVE-2026-53914 corrigée à partir de Kotlin 2.4.20 (Kotlin utilisé via MinIO) -->
+        <kotlin.version>2.4.21</kotlin.version>
     </properties>
 
     <dependencyManagement>
@@ -54,6 +56,12 @@
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
                 <version>${springdoc.version}</version>
+            </dependency>
+            <!-- Sécurité (OWASP) : swagger-ui 5.34.0 embarque DOMPurify 3.4.16 (CVE-2026-116803/116804) -->
+            <dependency>
+                <groupId>org.webjars</groupId>
+                <artifactId>swagger-ui</artifactId>
+                <version>5.34.1</version>
             </dependency>
             <!-- Catalogue officiel (BOM) : versions Spring Cloud compatibles entre elles -->
             <dependency>
