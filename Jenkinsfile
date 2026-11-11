@@ -99,6 +99,12 @@ pipeline {
         }
 
         stage('Scan des images (Trivy)') {
+            // Répartition des scans : OWASP (étape précédente) analyse les bibliothèques Java,
+            // Trivy analyse ici le système de l'image (paquets Alpine) : --pkg-types os.
+            // Sans cela, Trivy ré-analyse chaque gros app.jar et dépasse son délai (build #5).
+            environment {
+                TRIVY_OPTS = '--no-progress --scanners vuln --pkg-types os --timeout 15m'
+            }
             steps {
                 // Rapport complet (HIGH + CRITICAL) des 7 images, conservé pour le rapport de sécurité
                 sh '''
@@ -109,7 +115,7 @@ pipeline {
                         -v /var/run/docker.sock:/var/run/docker.sock \
                         -v trivy-cache:/root/.cache/ \
                         aquasec/trivy:latest image \
-                        --no-progress --severity HIGH,CRITICAL --exit-code 0 \
+                        $TRIVY_OPTS --severity HIGH,CRITICAL --exit-code 0 \
                         ${IMAGE_PREFIX}$s:$IMAGE_TAG >> trivy-backend.txt
                     done
                 '''
@@ -120,7 +126,7 @@ pipeline {
                         -v /var/run/docker.sock:/var/run/docker.sock \
                         -v trivy-cache:/root/.cache/ \
                         aquasec/trivy:latest image \
-                        --no-progress --skip-db-update --ignore-unfixed \
+                        $TRIVY_OPTS --skip-db-update --ignore-unfixed \
                         --severity CRITICAL --exit-code 1 \
                         ${IMAGE_PREFIX}$s:$IMAGE_TAG
                     done
