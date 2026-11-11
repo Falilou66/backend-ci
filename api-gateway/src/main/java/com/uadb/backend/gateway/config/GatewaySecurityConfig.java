@@ -76,6 +76,8 @@ public class GatewaySecurityConfig {
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .authorizeExchange(exchange -> exchange
+                        // Health check public (Docker, pipeline CD) : ne renvoie que l'état UP/DOWN
+                        .pathMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .pathMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/auth/login",

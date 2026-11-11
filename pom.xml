@@ -1,4 +1,3 @@
-
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -39,8 +38,11 @@
         <java.version>25</java.version>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <springdoc.version>2.8.0</springdoc.version>
-        <spring-cloud.version>2024.0.0</spring-cloud.version>
+        <springdoc.version>3.2.0</springdoc.version>
+        <!-- Spring Cloud 2025.1.x (Oakwood) : seule famille compatible avec Spring Boot 4.1 -->
+        <spring-cloud.version>2025.1.4</spring-cloud.version>
+        <!-- Sécurité (OWASP) : CVE-2026-53914 corrigée à partir de Kotlin 2.4.20 (Kotlin utilisé via MinIO) -->
+        <kotlin.version>2.4.21</kotlin.version>
     </properties>
 
     <dependencyManagement>
@@ -55,18 +57,31 @@
                 <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
                 <version>${springdoc.version}</version>
             </dependency>
+            <!-- Sécurité (OWASP) : swagger-ui 5.34.0 embarque DOMPurify 3.4.16 (CVE-2026-116803/116804) -->
             <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-                <version>4.2.0</version>
+                <groupId>org.webjars</groupId>
+                <artifactId>swagger-ui</artifactId>
+                <version>5.34.1</version>
             </dependency>
+            <!-- Catalogue officiel (BOM) : versions Spring Cloud compatibles entre elles -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
-                <version>4.2.0</version>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <!-- Dépendances héritées par TOUS les modules -->
+    <dependencies>
+        <!-- Actuator : expose /actuator/health (health checks Docker et pipeline CD) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+    </dependencies>
 
     <build>
         <pluginManagement>
@@ -77,6 +92,12 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
     </build>
 
 </project>
