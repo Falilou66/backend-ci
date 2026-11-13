@@ -1,186 +1,112 @@
 package com.uadb.backend.identity.service;
 
-import com.uadb.backend.identity.dto.UtilisateurAdminResponse;
-import com.uadb.backend.identity.entity.UtilisateurEntity;
-import com.uadb.backend.identity.enums.StatutUtilisateur;
-import com.uadb.backend.identity.repository.UtilisateurRepository;
+import com.uadb.backend.identity.dto.CreerAdministrateurRequest;
 import com.uadb.backend.identity.dto.ModifierRolesRequest;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import com.uadb.backend.identity.dto.UtilisateurAdminResponse;
+import com.uadb.backend.identity.entity.AdministrateurEntity;
+import com.uadb.backend.identity.entity.UtilisateurEntity;
+import com.uadb.backend.identity.enums.Role;
+import com.uadb.backend.identity.enums.StatutUtilisateur;
+import com.uadb.backend.identity.repository.AdministrateurRepository;
+import com.uadb.backend.identity.repository.UtilisateurRepository;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import java.util.stream.Collectors;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AdministrationService {
 
     private final UtilisateurRepository utilisateurRepository;
+    private final AdministrateurRepository administrateurRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public AdministrationService(
-            UtilisateurRepository utilisateurRepository) {
+            UtilisateurRepository utilisateurRepository,
+            AdministrateurRepository administrateurRepository,
+            PasswordEncoder passwordEncoder) {
         this.utilisateurRepository = utilisateurRepository;
+        this.administrateurRepository = administrateurRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Transactional
+    public UtilisateurAdminResponse creerAdministrateur(
+            CreerAdministrateurRequest request) {
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (utilisateurRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException(
+                    "Cette adresse email est déjà utilisée."
+            );
+        }
+
+        UtilisateurEntity utilisateur = new UtilisateurEntity();
+        utilisateur.setNom(request.nom().trim());
+        utilisateur.setPrenom(request.prenom().trim());
+        utilisateur.setEmail(email);
+        utilisateur.setTelephone(request.telephone());
+        utilisateur.setMotDePasse(passwordEncoder.encode(request.motDePasse()));
+        utilisateur.setRoles(Set.of(Role.ADMINISTRATEUR));
+        utilisateur.setStatut(StatutUtilisateur.ACTIF);
+        UtilisateurEntity saved = utilisateurRepository.save(utilisateur);
+        creerProfilAdministrateur(saved);
+        return versUtilisateurAdmin(saved);
+    }
+
+    @Transactional
+    public UtilisateurAdminResponse modifierRoles(
+            Long utilisateurId,
+            ModifierRolesRequest request) {
+        UtilisateurEntity utilisateur = utilisateurRepository
+                .findById(utilisateurId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Utilisateur introuvable."
+                ));
+
+        utilisateur.setRoles(request.roles());
+        UtilisateurEntity updated = utilisateurRepository.save(utilisateur);
+        if (request.roles().contains(Role.ADMINISTRATEUR)
+                && !administrateurRepository.existsById(updated.getId())) {
+            creerProfilAdministrateur(updated);
+        }
+        return versUtilisateurAdmin(updated);
     }
 
     @Transactional(readOnly = true)
-    public List<UtilisateurAdminResponse> listerInscriptionsEnAttente() {
-
-        List<UtilisateurEntity> utilisateurs =
-                utilisateurRepository.findAllByStatut(
-                        StatutUtilisateur.EN_ATTENTE_VALIDATION
-                );
-
-        return utilisateurs.stream()
-                .map(utilisateur -> new UtilisateurAdminResponse(
-                        utilisateur.getId(),
-                        utilisateur.getNom(),
-                        utilisateur.getPrenom(),
-                        utilisateur.getEmail(),
-                        utilisateur.getTelephone(),
-                        utilisateur.getStatut().name(),
-                        utilisateur.getRoles()
-                                .stream()
-                                .map(Enum::name)
-                                .collect(Collectors.toSet())
-                ))
-                .toList();
+    public Page<UtilisateurAdminResponse> listerUtilisateurs(Pageable pageable) {
+        return utilisateurRepository.findAll(pageable).map(this::versUtilisateurAdmin);
     }
-    @Transactional
-        public UtilisateurAdminResponse validerInscription(Long utilisateurId) {
 
-        UtilisateurEntity utilisateur = utilisateurRepository
-                .findById(utilisateurId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Utilisateur introuvable."
-                        )
-                );
+    @Transactional(readOnly = true)
+    public Page<UtilisateurAdminResponse> rechercherUtilisateurs(
+            String recherche,
+            Pageable pageable) {
+        return utilisateurRepository.rechercher(recherche, pageable)
+                .map(this::versUtilisateurAdmin);
+    }
 
-        if (utilisateur.getStatut() != StatutUtilisateur.EN_ATTENTE_VALIDATION) {
-                throw new IllegalArgumentException(
-                        "Cette inscription a déjà été traitée."
-                );
-        }
+    private void creerProfilAdministrateur(UtilisateurEntity utilisateur) {
+        AdministrateurEntity profil = new AdministrateurEntity();
+        profil.setUtilisateur(utilisateur);
+        administrateurRepository.save(profil);
+    }
 
-        utilisateur.setStatut(StatutUtilisateur.ACTIF);
-
-        UtilisateurEntity utilisateurEnregistre =
-                utilisateurRepository.save(utilisateur);
-
+    private UtilisateurAdminResponse versUtilisateurAdmin(
+            UtilisateurEntity utilisateur) {
         return new UtilisateurAdminResponse(
-                utilisateurEnregistre.getId(),
-                utilisateurEnregistre.getNom(),
-                utilisateurEnregistre.getPrenom(),
-                utilisateurEnregistre.getEmail(),
-                utilisateurEnregistre.getTelephone(),
-                utilisateurEnregistre.getStatut().name(),
-                utilisateurEnregistre.getRoles()
-                        .stream()
+                utilisateur.getId(),
+                utilisateur.getNom(),
+                utilisateur.getPrenom(),
+                utilisateur.getEmail(),
+                utilisateur.getTelephone(),
+                utilisateur.getStatut().name(),
+                utilisateur.getRoles().stream()
                         .map(Enum::name)
-                        .collect(java.util.stream.Collectors.toSet())
-        );
-        }
-        @Transactional
-public UtilisateurAdminResponse refuserInscription(Long utilisateurId) {
-
-    UtilisateurEntity utilisateur = utilisateurRepository
-            .findById(utilisateurId)
-            .orElseThrow(() ->
-                    new IllegalArgumentException(
-                            "Utilisateur introuvable."
-                    )
-            );
-
-    if (utilisateur.getStatut() != StatutUtilisateur.EN_ATTENTE_VALIDATION) {
-        throw new IllegalArgumentException(
-                "Cette inscription a déjà été traitée."
+                        .collect(Collectors.toSet())
         );
     }
-
-    utilisateur.setStatut(StatutUtilisateur.INACTIF);
-
-    UtilisateurEntity utilisateurEnregistre =
-            utilisateurRepository.save(utilisateur);
-
-    return new UtilisateurAdminResponse(
-            utilisateurEnregistre.getId(),
-            utilisateurEnregistre.getNom(),
-            utilisateurEnregistre.getPrenom(),
-            utilisateurEnregistre.getEmail(),
-            utilisateurEnregistre.getTelephone(),
-            utilisateurEnregistre.getStatut().name(),
-            utilisateurEnregistre.getRoles()
-                    .stream()
-                    .map(Enum::name)
-                    .collect(java.util.stream.Collectors.toSet())
-    );
-}
-@Transactional
-public UtilisateurAdminResponse modifierRoles(
-        Long utilisateurId,
-        ModifierRolesRequest request) {
-
-    UtilisateurEntity utilisateur = utilisateurRepository
-            .findById(utilisateurId)
-            .orElseThrow(() ->
-                    new IllegalArgumentException(
-                            "Utilisateur introuvable."
-                    )
-            );
-
-    utilisateur.setRoles(request.roles());
-
-    UtilisateurEntity utilisateurModifie =
-            utilisateurRepository.save(utilisateur);
-
-    return new UtilisateurAdminResponse(
-            utilisateurModifie.getId(),
-            utilisateurModifie.getNom(),
-            utilisateurModifie.getPrenom(),
-            utilisateurModifie.getEmail(),
-            utilisateurModifie.getTelephone(),
-            utilisateurModifie.getStatut().name(),
-            utilisateurModifie.getRoles()
-                    .stream()
-                    .map(Enum::name)
-                    .collect(java.util.stream.Collectors.toSet())
-    );
-}
-public Page<UtilisateurAdminResponse> listerUtilisateurs(Pageable pageable) {
-
-    return utilisateurRepository.findAll(pageable)
-            .map(utilisateur -> new UtilisateurAdminResponse(
-                    utilisateur.getId(),
-                    utilisateur.getNom(),
-                    utilisateur.getPrenom(),
-                    utilisateur.getEmail(),
-                    utilisateur.getTelephone(),
-                    utilisateur.getStatut().name(),
-                    utilisateur.getRoles()
-                            .stream()
-                            .map(Enum::name)
-                            .collect(Collectors.toSet())
-            ));
-}
-public Page<UtilisateurAdminResponse> rechercherUtilisateurs(
-        String recherche,
-        Pageable pageable) {
-
-    return utilisateurRepository.rechercher(recherche, pageable)
-            .map(utilisateur -> new UtilisateurAdminResponse(
-                    utilisateur.getId(),
-                    utilisateur.getNom(),
-                    utilisateur.getPrenom(),
-                    utilisateur.getEmail(),
-                    utilisateur.getTelephone(),
-                    utilisateur.getStatut().name(),
-                    utilisateur.getRoles()
-                            .stream()
-                            .map(Enum::name)
-                            .collect(Collectors.toSet())
-            ));
-}
 }

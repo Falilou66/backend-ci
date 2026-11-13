@@ -4,9 +4,12 @@ import com.uadb.backend.identity.dto.InscriptionRequest;
 import com.uadb.backend.identity.dto.UtilisateurResponse;
 import com.uadb.backend.identity.dto.ModifierProfilRequest;
 import com.uadb.backend.identity.entity.EtudiantEntity;
+import com.uadb.backend.identity.entity.EnseignantEntity;
 import com.uadb.backend.identity.entity.UtilisateurEntity;
 import com.uadb.backend.identity.enums.Role;
+import com.uadb.backend.identity.enums.StatutUtilisateur;
 import com.uadb.backend.identity.repository.EtudiantRepository;
+import com.uadb.backend.identity.repository.EnseignantRepository;
 import com.uadb.backend.identity.repository.UtilisateurRepository;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,41 +26,53 @@ public class UtilisateurService {
 
     private final UtilisateurRepository utilisateurRepository;
     private final EtudiantRepository etudiantRepository;
+    private final EnseignantRepository enseignantRepository;
     private final PasswordEncoder passwordEncoder;
 
     public UtilisateurService(
             UtilisateurRepository utilisateurRepository,
             EtudiantRepository etudiantRepository,
+            EnseignantRepository enseignantRepository,
             PasswordEncoder passwordEncoder) {
 
         this.utilisateurRepository = utilisateurRepository;
         this.etudiantRepository = etudiantRepository;
+        this.enseignantRepository = enseignantRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
+    private static final String DOMAINE_EMAIL_VALID = "@uadb.edu.sn";
+
     @Transactional
-    public UtilisateurResponse inscrireEtudiant(InscriptionRequest request) {
+    public UtilisateurResponse inscrire(InscriptionRequest request) {
 
         String email = request.email().trim().toLowerCase(Locale.ROOT);
-        String codePermanent = request.codePermanent().trim();
 
-        // Vérifier si l'adresse email existe déjà
+        validerDomaineEmail(email);
+
         if (utilisateurRepository.existsByEmail(email)) {
             throw new IllegalArgumentException(
                     "Cette adresse email est déjà utilisée."
             );
         }
 
-        // Vérifier si le code permanent existe déjà
-        if (etudiantRepository.existsByCodePermanent(codePermanent)) {
+        if (request.role() == Role.ADMINISTRATEUR) {
             throw new IllegalArgumentException(
-                    "Ce code permanent est déjà utilisé."
+                    "Les comptes administrateur sont créés par un administrateur."
             );
         }
 
-        // Créer le compte utilisateur
-        UtilisateurEntity utilisateur = new UtilisateurEntity();
+        if (request.role() == Role.ETUDIANT) {
+            inscrireEtudiant(request);
+        } else if (request.role() == Role.ENSEIGNANT) {
+            inscrireEnseignant(request);
+        } else {
+            throw new IllegalArgumentException(
+                    "Le type de compte doit être ETUDIANT ou ENSEIGNANT."
+            );
+        }
 
+        UtilisateurEntity utilisateur = new UtilisateurEntity();
         utilisateur.setNom(request.nom().trim());
         utilisateur.setPrenom(request.prenom().trim());
         utilisateur.setEmail(email);
@@ -65,32 +80,75 @@ public class UtilisateurService {
                 passwordEncoder.encode(request.motDePasse())
         );
         utilisateur.setTelephone(request.telephone());
-        utilisateur.setRoles(Set.of(Role.ETUDIANT));
+        utilisateur.setRoles(Set.of(request.role()));
+        utilisateur.setStatut(StatutUtilisateur.ACTIF);
 
-        // Enregistrer l'utilisateur
-        UtilisateurEntity utilisateurEnregistre =
-                utilisateurRepository.save(utilisateur);
+        UtilisateurEntity saved = utilisateurRepository.save(utilisateur);
 
-        // Créer le profil étudiant associé
-        EtudiantEntity etudiant = new EtudiantEntity();
+        if (request.role() == Role.ETUDIANT) {
+            EtudiantEntity etudiant = new EtudiantEntity();
+            etudiant.setUtilisateur(saved);
+            etudiant.setCodePermanent(request.codePermanent().trim());
+            etudiant.setFiliereId(request.filiereId());
+            etudiant.setNiveauId(request.niveauId());
+            etudiantRepository.save(etudiant);
+        } else {
+            EnseignantEntity enseignant = new EnseignantEntity();
+            enseignant.setUtilisateur(saved);
+            enseignant.setMatriculeProfessionnel(
+                    normaliserMatricule(request.matriculeProfessionnel()));
+            enseignantRepository.save(enseignant);
+        }
 
-        etudiant.setUtilisateur(utilisateurEnregistre);
-        etudiant.setCodePermanent(codePermanent);
-        etudiant.setFiliereId(request.filiereId());
-        etudiant.setNiveauId(request.niveauId());
-
-        etudiantRepository.save(etudiant);
-
-        // Retourner les informations publiques
         return new UtilisateurResponse(
-                utilisateurEnregistre.getId(),
-                utilisateurEnregistre.getNom(),
-                utilisateurEnregistre.getPrenom(),
-                utilisateurEnregistre.getEmail(),
-                utilisateurEnregistre.getTelephone(),
-                utilisateurEnregistre.getRoles(),
-                utilisateurEnregistre.getStatut()
+                saved.getId(),
+                saved.getNom(),
+                saved.getPrenom(),
+                saved.getEmail(),
+                saved.getTelephone(),
+                saved.getRoles(),
+                saved.getStatut()
         );
+    }
+
+    private void inscrireEtudiant(InscriptionRequest request) {
+        String codePermanent = request.codePermanent();
+        if (codePermanent == null || codePermanent.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Le code permanent est obligatoire pour un étudiant."
+            );
+        }
+        codePermanent = codePermanent.trim();
+        if (etudiantRepository.existsByCodePermanent(codePermanent)) {
+            throw new IllegalArgumentException(
+                    "Ce code permanent est déjà utilisé."
+            );
+        }
+    }
+
+    private void inscrireEnseignant(InscriptionRequest request) {
+        String matricule = normaliserMatricule(request.matriculeProfessionnel());
+        if (matricule != null
+                && enseignantRepository.findByMatriculeProfessionnel(matricule).isPresent()) {
+            throw new IllegalArgumentException(
+                    "Ce matricule professionnel est déjà utilisé."
+            );
+        }
+    }
+
+    private String normaliserMatricule(String matricule) {
+        if (matricule == null || matricule.isBlank()) {
+            return null;
+        }
+        return matricule.trim();
+    }
+
+    private void validerDomaineEmail(String email) {
+        if (!email.toLowerCase(Locale.ROOT).endsWith(DOMAINE_EMAIL_VALID)) {
+            throw new IllegalArgumentException(
+                    "L'adresse email doit se terminer par " + DOMAINE_EMAIL_VALID
+            );
+        }
     }
 
     @Transactional(readOnly = true)

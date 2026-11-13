@@ -67,8 +67,13 @@ cd backend-ci
 
 # Copier et adapter les variables d'environnement
 cp .env.example .env
-# Éditer .env avec vos valeurs (DB_PASSWORD, JWT_SECRET, etc.)
+# Éditer .env avec vos valeurs, notamment les identifiants de l'administrateur initial
 ```
+
+`BOOTSTRAP_ADMIN_EMAIL` doit être une adresse email valide et
+`BOOTSTRAP_ADMIN_PASSWORD` un mot de passe personnel d'au moins 8 caractères.
+L'administrateur est créé au premier démarrage d'identity-service si ce compte
+n'existe pas. Les redémarrages ne réinitialisent pas son mot de passe.
 
 ### 2. Démarrer l'infrastructure (MySQL + MinIO)
 
@@ -76,7 +81,16 @@ cp .env.example .env
 docker compose up -d mysql minio
 ```
 
-> Les bases de données sont créées automatiquement via `spring.jpa.hibernate.ddl-auto=update`.
+MySQL crée les bases des cinq microservices (`identity_db`, `academic_db`, `matching_db`, `resource_db`, `notification_db`) et `institution_db`, puis configure l'utilisateur commun `DB_USERNAME` / `DB_PASSWORD`. Celui-ci a les droits sur les bases applicatives et la lecture seule sur `institution_db`. Hibernate crée ensuite les tables de chaque service via `spring.jpa.hibernate.ddl-auto=update`.
+
+Les scripts `docker-entrypoint-initdb.d` ne sont lancés automatiquement qu'à la création d'un volume MySQL vide. Pour appliquer ou réappliquer les droits et bases sur un volume déjà existant, sans effacer les données :
+
+```bash
+docker compose up -d mysql
+docker compose exec mysql /docker-entrypoint-initdb.d/01-app-databases.sh
+```
+
+Le service autonome `service-mise-en-relation` n'est pas inclus dans le Compose racine : il utilise son propre conteneur PostgreSQL sur le port `5433`. Consulte [`service-mise-en-relation/README.md`](./service-mise-en-relation/README.md) pour le démarrer séparément.
 
 ### 3. Construire le projet
 
@@ -164,21 +178,29 @@ INTERNAL_API_KEY=fccc33f3d1acc6ba1248c1d12d87156cf37c635f80d68f8a13465ed51840f0b
 | Rôle | Description |
 |------|-------------|
 | `ETUDIANT` | Étudiant inscrit |
-| `ENSEIGNANT` | Enseignant / Tuteur |
-| `ADMINISTRATEUR` | Admin plateforme |
-| `PREMIERE_CONNEXION` | Utilisateur devant changer son mot de passe |
+| `ENSEIGNANT` | Enseignant inscrit |
+| `ADMINISTRATEUR` | Administrateur plateforme |
 
 ### Endpoints publics (sans token)
 
 - `POST /api/v1/auth/login`
-- `POST /api/v1/auth/inscription-institutionnelle`
+- `POST /api/v1/auth/inscription`
+
+`/inscription` accepte les rôles `ETUDIANT` et `ENSEIGNANT`, vérifie que
+l'adresse se termine par `@uadb.edu.sn`, active le compte immédiatement et
+renvoie un JWT dans la réponse `201 Created`. Pour un étudiant, `codePermanent`
+est obligatoire; pour un enseignant, `matriculeProfessionnel` est facultatif.
+La création publique d'un compte administrateur est refusée.
+
+L'administrateur initial est configuré via `BOOTSTRAP_ADMIN_EMAIL` et
+`BOOTSTRAP_ADMIN_PASSWORD` dans `.env`. Un administrateur connecté peut créer
+d'autres administrateurs avec `POST /api/v1/admin/administrateurs`.
 
 ### Endpoints protégés (exemples)
 
 | Méthode | Endpoint | Rôles requis |
 |---------|----------|--------------|
-| POST | `/api/v1/auth/inscription` | ADMINISTRATEUR |
-| PUT | `/api/v1/auth/premiere-connexion/mot-de-passe` | PREMIERE_CONNEXION |
+| POST | `/api/v1/admin/administrateurs` | ADMINISTRATEUR |
 | GET | `/api/v1/ufrs/**` | ETUDIANT, ENSEIGNANT, ADMINISTRATEUR |
 | POST | `/api/v1/ressources/**` | ENSEIGNANT, ADMINISTRATEUR |
 
@@ -196,6 +218,16 @@ http://localhost:8085/swagger-ui.html   # Notification Service
 ```
 
 Spécifications JSON : `/api-docs` sur chaque service.
+
+## Tests Postman
+
+Importer [`scripts/postman/backend-ci.postman_collection.json`](./scripts/postman/backend-ci.postman_collection.json) dans Postman. Les variables de collection contiennent les URL locales des services; renseigner aussi `internalApiKey` avec la valeur configurée dans `INTERNAL_API_KEY` pour les appels interservices.
+
+La requête **Inscription (ETUDIANT ou ENSEIGNANT, compte actif + JWT)** génère une adresse institutionnelle et enregistre directement le JWT dans `accessToken`. Pour créer un admin, renseigner `bootstrapAdminEmail` et `bootstrapAdminPassword` avec les valeurs configurées dans `.env`, exécuter **Connexion de l'administrateur initial**, puis renseigner `nouvelAdminEmail` et `nouvelAdminPassword` et exécuter **Créer un administrateur**.
+
+Les requêtes marquées `ADMINISTRATEUR` ou `TUTEUR` doivent recevoir un JWT avec ce rôle; remplacer `accessToken` par un jeton approprié si nécessaire. Les routes indiquées « route directe » ne sont pas déclarées dans les routes de l'API Gateway et utilisent l'URL directe du service. Le dossier **Nettoyage** contient des suppressions définitives et doit être lancé seulement si souhaité.
+
+Le projet autonome `service-mise-en-relation`, qui n'est pas un module du `pom.xml` racine, conserve sa propre collection : [`service-mise-en-relation/postman/mise-en-relation.postman_collection.json`](./service-mise-en-relation/postman/mise-en-relation.postman_collection.json).
 
 ## Communication Inter-Services
 

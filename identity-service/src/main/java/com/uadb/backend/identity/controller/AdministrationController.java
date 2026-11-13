@@ -1,6 +1,7 @@
 package com.uadb.backend.identity.controller;
 
 import com.uadb.backend.identity.dto.UtilisateurAdminResponse;
+import com.uadb.backend.identity.dto.CreerAdministrateurRequest;
 import com.uadb.backend.identity.service.AdministrationService;
 
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,7 +15,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -28,23 +28,12 @@ public class AdministrationController {
         this.administrationService = administrationService;
     }
 
-    @GetMapping("/inscriptions/en-attente")
-    public List<UtilisateurAdminResponse> listerInscriptionsEnAttente() {
-
-        return administrationService.listerInscriptionsEnAttente();
+    @PostMapping("/administrateurs")
+    public UtilisateurAdminResponse creerAdministrateur(
+            @Valid @RequestBody CreerAdministrateurRequest request) {
+        return administrationService.creerAdministrateur(request);
     }
-    @PutMapping("/inscriptions/{id}/valider")
-    public UtilisateurAdminResponse validerInscription(
-            @PathVariable Long id) {
 
-        return administrationService.validerInscription(id);
-    }
-    @PutMapping("/inscriptions/{id}/refuser")
-    public UtilisateurAdminResponse refuserInscription(
-            @PathVariable Long id) {
-
-        return administrationService.refuserInscription(id);
-    }
     @PutMapping("/utilisateurs/{id}/roles")
 public UtilisateurAdminResponse modifierRoles(
         @PathVariable Long id,

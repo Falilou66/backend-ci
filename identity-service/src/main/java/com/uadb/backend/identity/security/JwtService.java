@@ -25,30 +25,18 @@ public class JwtService {
     }
 
     public String genererToken(UtilisateurEntity utilisateur) {
-        List<String> roles = utilisateur.getRoles()
-                .stream()
-                .map(Enum::name)
-                .toList();
-
-        return construireToken(utilisateur, roles, expiration, "ACCESS");
-    }
-
-    public String genererTokenPremiereConnexion(UtilisateurEntity utilisateur) {
-        return construireToken(
-                utilisateur,
-                List.of("PREMIERE_CONNEXION"),
-                900_000,
-                "FIRST_LOGIN"
-        );
+        return construireToken(utilisateur, expiration);
     }
 
     private String construireToken(
             UtilisateurEntity utilisateur,
-            List<String> roles,
-            long duree,
-            String type) {
+            long duree) {
 
         Instant maintenant = Instant.now();
+        List<String> roles = utilisateur.getRoles()
+                .stream()
+                .map(Enum::name)
+                .toList();
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)
@@ -57,7 +45,6 @@ public class JwtService {
                 .subject(utilisateur.getEmail())
                 .claim("userId", utilisateur.getId())
                 .claim("roles", roles)
-                .claim("type", type)
                 .build();
 
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();

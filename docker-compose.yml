@@ -8,6 +8,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
       MYSQL_DATABASE: identity_db
+      MYSQL_USER: ${DB_USERNAME:-identity_app}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-identity}
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -16,6 +18,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./scripts/01-app-databases.sh:/docker-entrypoint-initdb.d/01-app-databases.sh:ro
       - ./scripts/institution_seed.sql:/docker-entrypoint-initdb.d/institution_seed.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root}"]
@@ -83,6 +86,11 @@ services:
       DB_USERNAME: ${DB_USERNAME:-identity_app}
       DB_PASSWORD: ${DB_PASSWORD:-identity}
       INSTITUTION_DB_URL: jdbc:mysql://mysql:3306/institution_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:?Définis BOOTSTRAP_ADMIN_EMAIL dans .env}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?Définis BOOTSTRAP_ADMIN_PASSWORD dans .env}
+      BOOTSTRAP_ADMIN_NOM: ${BOOTSTRAP_ADMIN_NOM:-Administrateur}
+      BOOTSTRAP_ADMIN_PRENOM: ${BOOTSTRAP_ADMIN_PRENOM:-Initial}
+      BOOTSTRAP_ADMIN_TELEPHONE: ${BOOTSTRAP_ADMIN_TELEPHONE:-}
       EUREKA_URL: http://eureka-server:8761/eureka/
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER:-uadb-platform}

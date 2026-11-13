@@ -1,0 +1,562 @@
+{
+  "info": {
+    "name": "UADB Backend - API",
+    "description": "Collection de tests des endpoints UADB. L'inscription ETUDIANT ou ENSEIGNANT crée immédiatement un compte actif et enregistre le JWT. Les routes admin et tuteur nécessitent un jeton portant le rôle correspondant.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('Réponse HTTP réussie (2xx)', function () {",
+          "  pm.expect(pm.response.code).to.be.within(200, 299);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "identityUrl", "value": "http://localhost:8081" },
+    { "key": "academicUrl", "value": "http://localhost:8082" },
+    { "key": "matchingUrl", "value": "http://localhost:8083" },
+    { "key": "resourceUrl", "value": "http://localhost:8084" },
+    { "key": "notificationUrl", "value": "http://localhost:8085" },
+    { "key": "internalApiKey", "value": "" },
+    { "key": "accessToken", "value": "" },
+    { "key": "email", "value": "" },
+    { "key": "motDePasse", "value": "UadbTest2026!" },
+    { "key": "codePermanent", "value": "" },
+    { "key": "bootstrapAdminEmail", "value": "" },
+    { "key": "bootstrapAdminPassword", "value": "" },
+    { "key": "nouvelAdminEmail", "value": "" },
+    { "key": "nouvelAdminPassword", "value": "UadbAdmin2026!" },
+    { "key": "utilisateurId", "value": "1" },
+    { "key": "ufrId", "value": "1" },
+    { "key": "filiereId", "value": "1" },
+    { "key": "niveauId", "value": "1" },
+    { "key": "coursId", "value": "1" },
+    { "key": "tuteurId", "value": "1" },
+    { "key": "disponibiliteId", "value": "1" },
+    { "key": "seanceId", "value": "1" },
+    { "key": "candidatureId", "value": "1" },
+    { "key": "ressourceId", "value": "1" },
+    { "key": "signalementId", "value": "1" },
+    { "key": "notificationId", "value": "1" },
+    { "key": "validateurId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "1 - Authentification et utilisateurs",
+      "item": [
+        {
+          "name": "Inscription (ETUDIANT ou ENSEIGNANT, compte actif + JWT)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Test\",\n  \"prenom\": \"Postman\",\n  \"email\": \"{{email}}\",\n  \"motDePasse\": \"{{motDePasse}}\",\n  \"telephone\": \"770000000\",\n  \"codePermanent\": \"{{codePermanent}}\",\n  \"filiereId\": null,\n  \"niveauId\": null,\n  \"role\": \"ETUDIANT\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/inscription"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('email', 'postman-' + pm.variables.replaceIn('{{$guid}}') + '@uadb.edu.sn');",
+                  "pm.collectionVariables.set('codePermanent', 'POSTMAN-' + pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Le compte est créé et renvoie un JWT (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.roles).to.include('ETUDIANT');",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "  pm.collectionVariables.set('utilisateurId', String(body.utilisateurId));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Connexion",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"motDePasse\": \"{{motDePasse}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Enregistre le JWT de connexion', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "  pm.collectionVariables.set('utilisateurId', String(body.utilisateurId));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Connexion de l'administrateur initial",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{bootstrapAdminEmail}}\",\n  \"motDePasse\": \"{{bootstrapAdminPassword}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La connexion admin enregistre un JWT administrateur', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.roles).to.include('ADMINISTRATEUR');",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mon profil",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/utilisateurs/me"
+          }
+        },
+        {
+          "name": "Modifier mon profil",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Test\",\n  \"prenom\": \"Postman\",\n  \"telephone\": \"770000000\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/utilisateurs/me"
+          }
+        },
+        {
+          "name": "Etudiants actifs par filière et niveau (clé interservice)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Internal-Api-Key", "value": "{{internalApiKey}}" }],
+            "url": "{{identityUrl}}/api/v1/utilisateurs/etudiants/destinataires?filiereId={{filiereId}}&niveauId={{niveauId}}"
+          }
+        },
+        {
+          "name": "Créer un administrateur (ADMINISTRATEUR)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Admin\",\n  \"prenom\": \"Postman\",\n  \"email\": \"{{nouvelAdminEmail}}\",\n  \"motDePasse\": \"{{nouvelAdminPassword}}\",\n  \"telephone\": \"770000001\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/admin/administrateurs"
+          }
+        },
+        {
+          "name": "Modifier les rôles (ADMINISTRATEUR)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roles\": [\"ETUDIANT\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/admin/utilisateurs/{{utilisateurId}}/roles"
+          }
+        },
+        {
+          "name": "Lister les utilisateurs (ADMINISTRATEUR)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/admin/utilisateurs?page=0&taille=10" }
+        },
+        {
+          "name": "Rechercher des utilisateurs (ADMINISTRATEUR)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/admin/utilisateurs/recherche?recherche=Test&page=0&taille=10" }
+        },
+        {
+          "name": "Accès espace étudiant (route directe)",
+          "request": { "method": "GET", "url": "{{identityUrl}}/api/v1/acces/etudiant" }
+        },
+        {
+          "name": "Accès espace enseignant (route directe)",
+          "request": { "method": "GET", "url": "{{identityUrl}}/api/v1/acces/enseignant" }
+        },
+        {
+          "name": "Accès espace administrateur (route directe)",
+          "request": { "method": "GET", "url": "{{identityUrl}}/api/v1/acces/administrateur" }
+        },
+        {
+          "name": "Déposer une candidature tuteur (ETUDIANT ou ENSEIGNANT, route directe)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Tutorat en algorithmique\",\n  \"motivation\": \"Aider les autres étudiants\",\n  \"coursIds\": [{{coursId}}]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{identityUrl}}/api/v1/tutorat/candidature"
+          }
+        },
+        {
+          "name": "Mes candidatures tuteur (route directe)",
+          "request": { "method": "GET", "url": "{{identityUrl}}/api/v1/tutorat/candidature/moi" }
+        },
+        {
+          "name": "Candidatures tuteur en attente (ADMINISTRATEUR)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/admin/candidatures-tuteurs/en-attente" }
+        },
+        {
+          "name": "Approuver une candidature tuteur (ADMINISTRATEUR)",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/v1/admin/candidatures-tuteurs/{{candidatureId}}/approuver" }
+        },
+        {
+          "name": "Refuser une candidature tuteur (ADMINISTRATEUR)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motif\": \"Informations insuffisantes\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/v1/admin/candidatures-tuteurs/{{candidatureId}}/refuser"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 - Données académiques",
+      "item": [
+        {
+          "name": "Créer une UFR",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nom\": \"UFR Test Postman\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/ufrs"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Enregistre ufrId', function () { const body = pm.response.json(); if (body.id) pm.collectionVariables.set('ufrId', String(body.id)); });"] } }]
+        },
+        { "name": "Lister les UFR", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/ufrs" } },
+        { "name": "Obtenir une UFR", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/ufrs/{{ufrId}}" } },
+        {
+          "name": "Modifier une UFR",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nom\": \"UFR Test Postman modifiée\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/ufrs/{{ufrId}}"
+          }
+        },
+        {
+          "name": "Créer une filière",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nom\": \"Filière Test Postman\",\n  \"description\": \"Filière pour les tests API\",\n  \"ufrId\": {{ufrId}}\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/filieres"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Enregistre filiereId', function () { const body = pm.response.json(); if (body.id) pm.collectionVariables.set('filiereId', String(body.id)); });"] } }]
+        },
+        { "name": "Lister les filières", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/filieres" } },
+        {
+          "name": "Modifier une filière",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nom\": \"Filière Test Postman modifiée\",\n  \"description\": \"Mise à jour de test\",\n  \"ufrId\": {{ufrId}}\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/filieres/{{filiereId}}"
+          }
+        },
+        {
+          "name": "Créer un niveau",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"POSTMAN-L1\",\n  \"libelle\": \"Niveau test Postman\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/niveaux"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Enregistre niveauId', function () { const body = pm.response.json(); if (body.id) pm.collectionVariables.set('niveauId', String(body.id)); });"] } }]
+        },
+        { "name": "Lister les niveaux", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/niveaux" } },
+        {
+          "name": "Modifier un niveau",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"POSTMAN-L1\",\n  \"libelle\": \"Niveau test modifié\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/niveaux/{{niveauId}}"
+          }
+        },
+        {
+          "name": "Créer un cours",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nom\": \"Cours Test Postman\",\n  \"description\": \"Cours de test API\",\n  \"volumeHoraire\": 30,\n  \"filiereId\": {{filiereId}},\n  \"niveauId\": {{niveauId}}\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/cours"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Enregistre coursId', function () { const body = pm.response.json(); if (body.id) pm.collectionVariables.set('coursId', String(body.id)); });"] } }]
+        },
+        { "name": "Rechercher les cours", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/cours?filiereId={{filiereId}}&niveauId={{niveauId}}&nom=Test&page=0&size=10" } },
+        { "name": "Obtenir un cours", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/cours/{{coursId}}" } },
+        {
+          "name": "Modifier un cours",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nom\": \"Cours Test Postman modifié\",\n  \"description\": \"Cours modifié\",\n  \"volumeHoraire\": 32,\n  \"filiereId\": {{filiereId}},\n  \"niveauId\": {{niveauId}}\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/cours/{{coursId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 - Matching et tutorat",
+      "item": [
+        { "name": "Rechercher des tuteurs", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/matching/tuteurs?coursId={{coursId}}&page=0&size=10" } },
+        { "name": "Consulter un tuteur", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/matching/tuteurs/{{tuteurId}}" } },
+        { "name": "Mon profil tuteur (TUTEUR)", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/matching/tuteurs/moi" } },
+        {
+          "name": "Modifier mon profil tuteur (TUTEUR)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"description\": \"Tuteur Postman\",\n  \"coursIds\": [{{coursId}}]\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/matching/tuteurs/moi"
+          }
+        },
+        {
+          "name": "Provisionner un tuteur (clé interservice)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Api-Key", "value": "{{internalApiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"utilisateurId\": {{utilisateurId}},\n  \"description\": \"Tuteur provisionné pour les tests\",\n  \"coursIds\": [{{coursId}}]\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{matchingUrl}}/api/v1/matching/interne/tuteurs"
+          }
+        },
+        { "name": "Lister mes disponibilités (TUTEUR)", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/matching/tuteurs/moi/disponibilites" } },
+        {
+          "name": "Ajouter une disponibilité (TUTEUR)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"jour\": \"LUNDI\",\n  \"heureDebut\": \"14:00\",\n  \"heureFin\": \"15:00\",\n  \"disponible\": true\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/matching/tuteurs/moi/disponibilites"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Enregistre disponibiliteId', function () { const body = pm.response.json(); if (body.id) pm.collectionVariables.set('disponibiliteId', String(body.id)); });"] } }]
+        },
+        {
+          "name": "Modifier une disponibilité (TUTEUR)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"jour\": \"LUNDI\",\n  \"heureDebut\": \"15:00\",\n  \"heureFin\": \"16:00\",\n  \"disponible\": true\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/matching/tuteurs/moi/disponibilites/{{disponibiliteId}}"
+          }
+        },
+        { "name": "Supprimer une disponibilité (TUTEUR)", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/matching/tuteurs/moi/disponibilites/{{disponibiliteId}}" } },
+        {
+          "name": "Demander une séance (ETUDIANT ou ENSEIGNANT)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"tuteurId\": {{tuteurId}},\n  \"coursId\": {{coursId}},\n  \"dateSeance\": \"{{dateSeance}}\",\n  \"heureDebut\": \"14:00\",\n  \"heureFin\": \"15:00\",\n  \"mode\": \"DISTANCIEL\",\n  \"lieu\": \"En ligne\",\n  \"motif\": \"Demande de séance de test\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/matching/seances"
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);", "pm.collectionVariables.set('dateSeance', tomorrow);"] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Enregistre seanceId', function () { const body = pm.response.json(); if (body.id) pm.collectionVariables.set('seanceId', String(body.id)); });"] } }
+          ]
+        },
+        { "name": "Mes demandes de séances (ETUDIANT ou ENSEIGNANT)", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/matching/seances/mes-demandes" } },
+        { "name": "Mes séances comme tuteur (TUTEUR)", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/matching/seances/mes-seances-tuteur" } },
+        { "name": "Accepter une séance (TUTEUR)", "request": { "method": "PUT", "url": "{{baseUrl}}/api/v1/matching/seances/{{seanceId}}/accepter" } },
+        {
+          "name": "Refuser une séance (TUTEUR)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"motif\": \"Indisponible\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/matching/seances/{{seanceId}}/refuser"
+          }
+        },
+        {
+          "name": "Annuler une séance",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"motif\": \"Annulation de test\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/matching/seances/{{seanceId}}/annuler"
+          }
+        },
+        { "name": "Terminer une séance (TUTEUR)", "request": { "method": "PUT", "url": "{{baseUrl}}/api/v1/matching/seances/{{seanceId}}/terminer" } },
+        {
+          "name": "Déposer un avis (ETUDIANT ou ENSEIGNANT)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"note\": 5,\n  \"commentaire\": \"Séance de test utile\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/matching/seances/{{seanceId}}/avis"
+          }
+        },
+        { "name": "Lister les avis d'un tuteur", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/matching/tuteurs/{{tuteurId}}/avis" } },
+        { "name": "Résumé des avis d'un tuteur", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/matching/tuteurs/{{tuteurId}}/avis/resume" } }
+      ]
+    },
+    {
+      "name": "4 - Ressources pédagogiques et signalements",
+      "item": [
+        {
+          "name": "Créer une ressource par JSON",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"titre\": \"Ressource Postman\",\n  \"description\": \"Ressource de test\",\n  \"type\": \"PDF\",\n  \"url\": \"https://example.org/document.pdf\",\n  \"coursId\": {{coursId}},\n  \"auteurId\": {{utilisateurId}}\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/ressources"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Enregistre ressourceId', function () { const body = pm.response.json(); if (body.id) pm.collectionVariables.set('ressourceId', String(body.id)); });"] } }]
+        },
+        {
+          "name": "Publier une ressource avec fichier (multipart)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "titre", "value": "Document Postman", "type": "text" },
+                { "key": "description", "value": "Fichier de test", "type": "text" },
+                { "key": "type", "value": "PDF", "type": "text" },
+                { "key": "coursId", "value": "{{coursId}}", "type": "text" },
+                { "key": "auteurId", "value": "{{utilisateurId}}", "type": "text" },
+                { "key": "fichier", "type": "file", "src": "" }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/ressources"
+          }
+        },
+        { "name": "Rechercher des ressources", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/ressources?coursId={{coursId}}&auteurId={{utilisateurId}}&type=PDF&titre=Postman&page=0&size=10" } },
+        { "name": "Obtenir une ressource publiée", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/ressources/{{ressourceId}}" } },
+        { "name": "Lister les ressources d'un cours", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/ressources/cours/{{coursId}}" } },
+        { "name": "Télécharger le fichier d'une ressource", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/ressources/{{ressourceId}}/fichier" } },
+        { "name": "Ressources en attente (administration)", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/ressources/admin/en-attente" } },
+        { "name": "Valider une ressource", "request": { "method": "PUT", "url": "{{baseUrl}}/api/v1/ressources/admin/{{ressourceId}}/valider?validateurId={{validateurId}}" } },
+        { "name": "Rejeter une ressource", "request": { "method": "PUT", "url": "{{baseUrl}}/api/v1/ressources/admin/{{ressourceId}}/rejeter?validateurId={{validateurId}}&motif=Contenu%20de%20test" } },
+        {
+          "name": "Modifier une ressource",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"titre\": \"Ressource Postman modifiée\",\n  \"description\": \"Ressource modifiée\",\n  \"type\": \"PDF\",\n  \"url\": \"https://example.org/document-modifie.pdf\",\n  \"coursId\": {{coursId}},\n  \"auteurId\": {{utilisateurId}}\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/ressources/{{ressourceId}}"
+          }
+        },
+        {
+          "name": "Signaler une ressource",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"utilisateurId\": {{utilisateurId}},\n  \"motif\": \"CONTENU_INAPPROPRIE\",\n  \"description\": \"Signalement de test\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/ressources/{{ressourceId}}/signalements"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Enregistre signalementId', function () { const body = pm.response.json(); if (body.id) pm.collectionVariables.set('signalementId', String(body.id)); });"] } }]
+        },
+        { "name": "Lister les signalements", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/signalements?statut=EN_ATTENTE" } },
+        { "name": "Lister les signalements d'une ressource", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/ressources/{{ressourceId}}/signalements" } },
+        { "name": "Traiter un signalement", "request": { "method": "PUT", "url": "{{baseUrl}}/api/v1/signalements/{{signalementId}}/statut?statut=TRAITE" } }
+      ]
+    },
+    {
+      "name": "5 - Notifications",
+      "item": [
+        {
+          "name": "Créer une notification (clé interservice)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Api-Key", "value": "{{internalApiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"utilisateurId\": {{utilisateurId}},\n  \"type\": \"TEST\",\n  \"titre\": \"Notification Postman\",\n  \"message\": \"Notification de test\",\n  \"lien\": \"/test\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{notificationUrl}}/api/v1/notifications"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Enregistre notificationId', function () { const body = pm.response.json(); if (body.id) pm.collectionVariables.set('notificationId', String(body.id)); });"] } }]
+        },
+        { "name": "Lister les notifications d'un utilisateur", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/notifications/utilisateur/{{utilisateurId}}" } },
+        { "name": "Lister les notifications non lues", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/notifications/utilisateur/{{utilisateurId}}/non-lues" } },
+        { "name": "Compter les notifications non lues", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/notifications/utilisateur/{{utilisateurId}}/compteur" } },
+        { "name": "Marquer une notification comme lue", "request": { "method": "PATCH", "url": "{{baseUrl}}/api/v1/notifications/{{notificationId}}/lue?utilisateurId={{utilisateurId}}" } },
+        { "name": "Tout marquer comme lu", "request": { "method": "PATCH", "url": "{{baseUrl}}/api/v1/notifications/utilisateur/{{utilisateurId}}/tout-lire" } },
+        { "name": "Supprimer une notification", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/notifications/{{notificationId}}?utilisateurId={{utilisateurId}}" } }
+      ]
+    },
+    {
+      "name": "6 - Nettoyage (opérations destructives)",
+      "item": [
+        { "name": "Supprimer une ressource", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/ressources/{{ressourceId}}" } },
+        { "name": "Supprimer un cours", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/cours/{{coursId}}" } },
+        { "name": "Supprimer une filière", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/filieres/{{filiereId}}" } },
+        { "name": "Supprimer un niveau", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/niveaux/{{niveauId}}" } },
+        { "name": "Supprimer une UFR", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/ufrs/{{ufrId}}" } }
+      ]
+    }
+  ]
+}
