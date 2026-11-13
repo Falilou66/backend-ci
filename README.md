@@ -139,8 +139,15 @@ NOTIFICATION_DB_URL=jdbc:mysql://localhost:3306/notification_db
 EUREKA_URL=http://localhost:8761/eureka/
 
 # JWT (clé base64, min 256 bits)
-JWT_SECRET=xZRRbcx92jq0kq3uB6+65Gtf+OJ7kc36RUcIerqEY5MtTcDCiJu8C/SK4ytTbA82
+JWT_SECRET=<votre-clé-base64-de-256-bits-minimum>
 JWT_ISSUER=uadb-platform
+
+# Administrateur initial (Docker Compose)
+BOOTSTRAP_ADMIN_EMAIL=admin@uadb.edu.sn
+BOOTSTRAP_ADMIN_PASSWORD=<mot-de-passe-personnel-de-8-caracteres-minimum>
+BOOTSTRAP_ADMIN_NOM=Administrateur
+BOOTSTRAP_ADMIN_PRENOM=Initial
+BOOTSTRAP_ADMIN_TELEPHONE=
 
 # MinIO
 MINIO_ENDPOINT=http://localhost:9000
@@ -169,8 +176,9 @@ INTERNAL_API_KEY=fccc33f3d1acc6ba1248c1d12d87156cf37c635f80d68f8a13465ed51840f0b
 ### JWT Token
 
 - Algorithme : **HS256**
-- Claim `roles` : liste des rôles (`ROLE_ETUDIANT`, `ROLE_ENSEIGNANT`, `ROLE_ADMINISTRATEUR`)
-- Claim `sub` : identifiant utilisateur
+- Claim `roles` : liste des noms de rôles (`ETUDIANT`, `ENSEIGNANT`, `ADMINISTRATEUR`); les services les convertissent en autorités Spring `ROLE_*`.
+- Claim `sub` : adresse e-mail de l'utilisateur
+- Claim `userId` : identifiant numérique de l'utilisateur
 - Expiration : 24h (configurable via `app.jwt.expiration`)
 
 ### Rôles
@@ -195,6 +203,10 @@ La création publique d'un compte administrateur est refusée.
 L'administrateur initial est configuré via `BOOTSTRAP_ADMIN_EMAIL` et
 `BOOTSTRAP_ADMIN_PASSWORD` dans `.env`. Un administrateur connecté peut créer
 d'autres administrateurs avec `POST /api/v1/admin/administrateurs`.
+Au démarrage, les comptes hérités au statut `EN_ATTENTE_VALIDATION` sont
+activés automatiquement afin qu'ils ne restent pas bloqués par l'ancien
+parcours d'approbation. La valeur de statut est conservée pour compatibilité
+avec les données existantes.
 
 ### Endpoints protégés (exemples)
 
@@ -387,9 +399,16 @@ MYSQL_ROOT_PASSWORD=root
 DB_USERNAME=identity_app
 DB_PASSWORD=identity
 
-# JWT (doit être identique partout)
-JWT_SECRET=xZRRbcx92jq0kq3uB6+65Gtf+OJ7kc36RUcIerqEY5MtTcDCiJu8C/SK4ytTbA82
+# JWT (clé base64 privée, identique partout)
+JWT_SECRET=<votre-clé-base64-de-256-bits-minimum>
 JWT_ISSUER=uadb-platform
+
+# Administrateur initial (créé au premier démarrage d'identity-service)
+BOOTSTRAP_ADMIN_EMAIL=admin@uadb.edu.sn
+BOOTSTRAP_ADMIN_PASSWORD=<mot-de-passe-personnel-de-8-caracteres-minimum>
+BOOTSTRAP_ADMIN_NOM=Administrateur
+BOOTSTRAP_ADMIN_PRENOM=Initial
+BOOTSTRAP_ADMIN_TELEPHONE=
 
 # MinIO
 MINIO_ROOT_USER=minio_uadb
