@@ -83,8 +83,14 @@ public class GatewaySecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/inscription"
                         ).permitAll()
+                        // resource-service n'a pas de sécurité propre : la gateway protège ses routes
+                        // d'administration (sinon tout utilisateur connecté pouvait valider/rejeter
+                        // des ressources ou traiter les signalements).
+                        .pathMatchers("/api/v1/ressources/admin/**").hasRole("ADMINISTRATEUR")
+                        .pathMatchers(HttpMethod.GET, "/api/v1/signalements").hasRole("ADMINISTRATEUR")
+                        .pathMatchers(HttpMethod.PUT, "/api/v1/signalements/*/statut").hasRole("ADMINISTRATEUR")
                         .anyExchange().hasAnyRole(
-                                "ETUDIANT", "ENSEIGNANT", "ADMINISTRATEUR"
+                                "ETUDIANT", "ENSEIGNANT", "ADMINISTRATEUR", "TUTEUR"
                         )
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
