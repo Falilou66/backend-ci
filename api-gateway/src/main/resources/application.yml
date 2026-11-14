@@ -17,7 +17,7 @@ spring:
             - id: identity-service
               uri: lb://identity-service
               predicates:
-                - Path=/api/v1/auth/**,/api/v1/admin/**,/api/v1/utilisateurs/**
+                - Path=/api/v1/auth/**,/api/v1/admin/**,/api/v1/utilisateurs/**,/api/v1/tutorat/**,/api/v1/acces/**
 
             - id: academic-service
               uri: lb://academic-service
