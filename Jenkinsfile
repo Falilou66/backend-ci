@@ -25,6 +25,8 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                // Repart sans les rapports du build précédent (sinon ils fausseraient la comparaison)
+                sh 'rm -f target/dependency-check-report.* trivy-*.json trivy-backend.txt rapport-securite.csv constats-*.csv resume-securite.txt reference-securite.csv'
             }
         }
 
@@ -119,6 +121,19 @@ pipeline {
                         ${IMAGE_PREFIX}$s:$IMAGE_TAG >> trivy-backend.txt
                     done
                 '''
+                // Même analyse en JSON, TOUTES sévérités : une entrée par faille avec son CVE.
+                // Sert au rapport comparable d'un build à l'autre (ci/rapport-securite.sh).
+                sh '''
+                    rm -f trivy-*.json
+                    for s in $SERVICES; do
+                      docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        -v trivy-cache:/root/.cache/ \
+                        aquasec/trivy:latest image \
+                        $TRIVY_OPTS --skip-db-update --format json --exit-code 0 \
+                        ${IMAGE_PREFIX}$s:$IMAGE_TAG > trivy-$s.json
+                    done
+                '''
                 // Échec si une image contient une faille CRITIQUE corrigeable
                 sh '''
                     for s in $SERVICES; do
@@ -155,11 +170,22 @@ pipeline {
 
     post {
         always {
+            // Rapport de sécurité comparable : mêmes noms de fichiers et mêmes colonnes à chaque build,
+            // un constat = un identifiant stable (CVE), comparé au dernier build réussi.
+            // Lancé même si un scan a bloqué le build : c'est là qu'on en a le plus besoin.
+            sh 'bash ci/rapport-securite.sh backend-ci || echo "Rapport de sécurité non généré"'
+            script {
+                if (fileExists('resume-securite.txt')) {
+                    currentBuild.description = readFile('resume-securite.txt').trim()
+                }
+            }
             // Rapports de sécurité conservés avec chaque build (onglet "Artefacts")
-            archiveArtifacts artifacts: 'target/dependency-check-report.*, trivy-backend.txt', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'target/dependency-check-report.*, trivy-backend.txt, trivy-*.json, rapport-securite.csv, constats-nouveaux.csv, constats-corriges.csv, resume-securite.txt', allowEmptyArchive: true
             sh 'docker logout || true'
         }
         success {
+            // Seul un build complet et réussi devient la référence de comparaison
+            sh 'bash ci/rapport-securite.sh backend-ci --enregistrer'
             echo "✅ 7 images publiées : ${IMAGE_PREFIX}<service>:${IMAGE_TAG}"
         }
         failure {

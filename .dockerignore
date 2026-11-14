@@ -43,3 +43,7 @@ jacoco.exec
 # Misc
 *.md
 !README.md
+# Rapports de sécurité générés par le pipeline (ne vont pas dans les images)
+trivy-*.json
+*.csv
+resume-securite.txt
