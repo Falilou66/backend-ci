@@ -81,16 +81,8 @@ public class GatewaySecurityConfig {
                         .pathMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/auth/login",
-                                "/api/v1/auth/inscription-institutionnelle"
-                        ).permitAll()
-                        .pathMatchers(
-                                HttpMethod.PUT,
-                                "/api/v1/auth/premiere-connexion/mot-de-passe"
-                        ).hasRole("PREMIERE_CONNEXION")
-                        .pathMatchers(
-                                HttpMethod.POST,
                                 "/api/v1/auth/inscription"
-                        ).hasRole("ADMINISTRATEUR")
+                        ).permitAll()
                         .anyExchange().hasAnyRole(
                                 "ETUDIANT", "ENSEIGNANT", "ADMINISTRATEUR"
                         )

@@ -1,6 +1,5 @@
 package com.uadb.backend.identity.service;
 
-import com.uadb.backend.identity.dto.ChangerMotDePasseRequest;
 import com.uadb.backend.identity.dto.LoginRequest;
 import com.uadb.backend.identity.dto.LoginResponse;
 import com.uadb.backend.identity.entity.UtilisateurEntity;
@@ -59,19 +58,6 @@ public class AuthentificationService {
             throw new DisabledException("Ce compte n'est pas actif.");
         }
 
-        if (utilisateur.isDoitChangerMotDePasse()) {
-            return new LoginResponse(
-                    jwtService.genererTokenPremiereConnexion(utilisateur),
-                    "Bearer",
-                    900,
-                    utilisateur.getId(),
-                    utilisateur.getNom(),
-                    utilisateur.getPrenom(),
-                    utilisateur.getEmail(),
-                    Set.of("PREMIERE_CONNEXION")
-            );
-        }
-
         Set<String> roles = utilisateur.getRoles()
                 .stream()
                 .map(Enum::name)
@@ -89,44 +75,4 @@ public class AuthentificationService {
         );
     }
 
-    @Transactional
-    public LoginResponse changerMotDePasse(
-            String email,
-            ChangerMotDePasseRequest request) {
-
-        UtilisateurEntity utilisateur = utilisateurRepository
-                .findByEmail(email)
-                .orElseThrow(() -> new BadCredentialsException(
-                        "Utilisateur introuvable."
-                ));
-
-        if (!utilisateur.isDoitChangerMotDePasse()) {
-            throw new IllegalArgumentException(
-                    "Aucun changement initial de mot de passe n'est requis."
-            );
-        }
-
-        utilisateur.setMotDePasse(
-                passwordEncoder.encode(request.nouveauMotDePasse())
-        );
-        utilisateur.setDoitChangerMotDePasse(false);
-
-        utilisateurRepository.save(utilisateur);
-
-        Set<String> roles = utilisateur.getRoles()
-                .stream()
-                .map(Enum::name)
-                .collect(Collectors.toSet());
-
-        return new LoginResponse(
-                jwtService.genererToken(utilisateur),
-                "Bearer",
-                expiration / 1000,
-                utilisateur.getId(),
-                utilisateur.getNom(),
-                utilisateur.getPrenom(),
-                utilisateur.getEmail(),
-                roles
-        );
-    }
 }

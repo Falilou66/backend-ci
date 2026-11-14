@@ -3,7 +3,6 @@ package com.uadb.backend.identity.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -50,16 +49,14 @@ public class SecurityConfig {
                     .requestMatchers(
                             HttpMethod.POST,
                             "/api/v1/auth/login",
-                            "/api/v1/auth/inscription-institutionnelle"
+                            "/api/v1/auth/inscription"
                     ).permitAll()
                     .requestMatchers(
-                            HttpMethod.PUT,
-                            "/api/v1/auth/premiere-connexion/mot-de-passe"
-                    ).hasRole("PREMIERE_CONNEXION")
-                    .requestMatchers(
-                            HttpMethod.POST,
-                            "/api/v1/auth/inscription"
-                    ).hasRole("ADMINISTRATEUR")
+                            "/swagger-ui.html",
+                            "/swagger-ui/**",
+                            "/api-docs",
+                            "/api-docs/**"
+                    ).permitAll()
                     .anyRequest().hasAnyRole(
                             "ETUDIANT", "ENSEIGNANT", "ADMINISTRATEUR", "TUTEUR"
                     )

@@ -2,7 +2,9 @@ package com.uadb.backend.identity.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import com.uadb.backend.identity.enums.Role;
 
 public record InscriptionRequest(
     @NotBlank(message = "Le nom est obligatoire")
@@ -25,10 +27,15 @@ public record InscriptionRequest(
     @Size(max = 20)
     String telephone,
 
-    @NotBlank(message = "Le code permanent est obligatoire")
     @Size(max = 50)
     String codePermanent,
 
     Long filiereId,
-    Long niveauId
+    Long niveauId,
+
+    @NotNull(message = "Le type de compte est obligatoire")
+    Role role,
+
+    @Size(max = 50)
+    String matriculeProfessionnel
 ) {}
